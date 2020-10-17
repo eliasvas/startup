@@ -1,8 +1,8 @@
-<h2>This is a basic win32 abstraction layer for starting projects!</h2>
+<h2>This is a basic OpenGL abstraction layer for starting projects!</h2>
 
 The main files of the project are:
 <ul>
-    <li><code>win32_main.cpp</code> -where the program starts</li>
+    <li><code>win32_main.c</code> -where the program starts</li>
     <li><code>win32_opengl.c</code> -where openGL function pointers are loaded</li>
     <li><code>platform.h</code> -the main OS interface of the project</li>
     <li><code>tools.h</code> -some helper functions/typedefs</li>
@@ -23,7 +23,7 @@ I have also added 3 Files to get you started writing OpenGL code:
 These are not mandatory, you can delete them if you want!
 
 Now for a general review of the architecture.
-The program starts at <code>win32_main.cpp</code> where a win32 window is created and
+The program starts at <code>win32_main.c</code> where a win32 window is created and
 the function pointers to modern OpenGL functions are loaded in <code>win32_opengl.c</code>.
 The prototypes for these functions lie in <code>platform.h</code> which serves as a middle
 man between the OS and you, <code>tools.h</code> has some helper stuff just for convenience.
