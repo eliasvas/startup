@@ -3,20 +3,19 @@
 //This is the main library of this startup project, it has a couple image libraries, a hash map, a
 //dynamic array sean barrett style, an arena allocator, quaternions, matrices, vectors, all that. Use at your own risk!! :)
 
-#if defined(_WIN32)
+#if defined(BUILD_WIN32)
 #include "windows.h"
 #endif
+
 #include <stdint.h>
 #include <time.h>
 #include <stdlib.h>
 #include <assert.h>
 #include <stdio.h>
 #include <math.h>
-#include <string>
 
-
-#if !defined(NO_CRT)
-#define NO_CRT 0
+#if !defined(CRTLESS)
+#define CRTLESS 0
 #endif
 
 typedef uint8_t   u8;
@@ -35,11 +34,16 @@ typedef char      b8;
 #define INLINE static inline
 #define INTERNAL static
 
+#define kilobytes(val) ((val)*1024LL)
+#define megabytes(val) ((kilobytes(val))*1024LL)
+#define gigabytes(val) ((megabytes(val))*1024LL)
+#define terabytes(val) ((gigabytes(val))*1024LL)
+
 #define PI 3.1415926535897f
 
-#ifdef NO_CRT
+#ifdef CRTLESS | 1 
 #define offsetof2(type, member) ((unsigned int)((unsigned char*)&((type*)0)->member - (unsigned char*)0)) 
-INLINE i32 abs(i32 x)
+INLINE i32 abs2(i32 x)
 {
   return x < 0 ? -x : x;
 }
@@ -48,8 +52,6 @@ INLINE f32 fabs2(f32 x)
     return x < 0 ? -x : x;
 }
 
-INLINE i32 isnan(f32 x) { return x != x; }
-INLINE i32 isinf(f32 x) { return !isnan(x) && isnan(x - x); }
 
 //cos_32 computes a cosine to about 3.2 decimal digits of accuracy
 INLINE f32 
@@ -89,7 +91,15 @@ INLINE f32 sin_32(f32 x)
 {
     return cos_32(PI/2.f - x);
 }
+#define sinf(x) sin_32(x)
+#define cosf(x) cos_32(x)
 #endif
+INLINE f32 fmodf(f32 a, f32 b)
+{
+    f32 div = a/b;
+    i32 mod = (i32)div;
+    return (f32)mod;
+}
 
 #define align_pow2(val, align) (((val) + ((align) - 1)) & ~(((val) - (val)) + (align) - 1))
 #define align4(val) (((val) + 3) & ~3)
@@ -150,6 +160,14 @@ str_size(char* str)
     return i;
 }
 
+static u32
+find_char_in_string(char *string,i32 start_index, char tofind)
+{
+    i32 iter = start_index;
+    while (string[iter] != '\0' && string[iter] != tofind) iter++;
+    return iter;
+}
+
 static void
 seed_random()
 {
@@ -177,7 +195,7 @@ random01(void)
 }
 
 INLINE f32 
-random(f32 lo, f32 hi)
+rrandom(f32 lo, f32 hi)
 {
     //seed_random();
 	f32 r = (f32)rand();
@@ -204,6 +222,15 @@ read_whole_file(const char *filename)
 
     return (char*)string;
 }
+INLINE u32
+get_file_size(const char *filename)
+{
+    FILE *f = fopen(filename, "rb");
+    if (!f)return 0;
+    fseek(f, 0, SEEK_END);
+    u32 fsize = ftell(f);
+    return fsize;
+}
 
 INLINE b32 
 file_exists(char* filename) {
@@ -217,19 +244,6 @@ file_exists(char* filename) {
   }
 
   return ret;
-}
-
-//TODO: delete this
-static std::string 
-getFileName(const std::string& s) {
-
-   char sep = '/';
-   size_t i = s.rfind(sep, s.length());
-   if (i != std::string::npos) {
-      return(s.substr(i+1, s.length() - i));
-   }
-
-   return("");
 }
 
 static i32 
@@ -505,7 +519,7 @@ INLINE f32 length_vec2(vec2 v)
 
 INLINE vec2 abs_vec2(vec2 v)
 {
-    vec2 res = v2(abs(v.x), abs(v.y));
+    vec2 res = v2(fabs(v.x), fabs(v.y));
     return res;
 }
    
@@ -1053,7 +1067,7 @@ INLINE mat4 inv_mat4(mat4 m)
         m.raw[2] * inv.raw[8] + m.raw[3] * inv.raw[12];
 
     if (det == 0) //in case the matrix is non-invertible
-        return {0}; 
+        return m4d(0.f); 
 
     det = 1.f / det;
 
@@ -1441,7 +1455,7 @@ INLINE f32 dot_quat(Quaternion l, Quaternion r)
 INLINE b32 equals_quat(Quaternion l, Quaternion r)
 {
     f32 dot = dot_quat(l,r);
-    return 1 ? 0 : abs(dot - 1.f) < 0.001f;
+    return 1 ? 0 : fabs(dot - 1.f) < 0.001f;
 }
 
 
@@ -2042,8 +2056,8 @@ ppm_write01(PPMInfo* info, const char *filename)
     return PPM_OK;
 }
 
-//TODO: put this whole thing on a thread on its own
-static i32 ppm_save_current_framebuffer(i32 width, i32 height, f32* pixels)
+//TODO: put this whole thing on a thread of its own
+static i32 ppm_save_pixels(i32 width, i32 height, f32* pixels)
 {
     PPMInfo *info = ppm_init(width,height);
     i32 i;
@@ -2056,7 +2070,7 @@ static i32 ppm_save_current_framebuffer(i32 width, i32 height, f32* pixels)
     {
         f32 *pixels = (f32*)ALLOC(sizeof(f32) * 3 * global_platform.window_width* global_platform.window_height); 
         glReadPixels(0, 0, global_platform.window_width,global_platform.window_height,GL_RGB, GL_FLOAT, pixels);
-        ppm_save_current_framebuffer( global_platform.window_width, global_platform.window_height, pixels);
+        ppm_save_pixels( global_platform.window_width, global_platform.window_height, pixels);
         free(pixels);
     }
 */
@@ -2154,24 +2168,16 @@ static String str(Arena* arena, char* characters)
     return s; 
 }
 
-//this has to go make it string_equals
-static u32
-strcmp(String l, String r)
-{
-    u32 res = 0;
-    res =strcmp(l.data,r.data);
-    return res;
-}
-
 
 //SIMPLE INT TO INT HASHMAP NOTE: VERY SLOW TODO: FIX..
 
-typedef struct IntPair
+typedef struct IntPair IntPair; 
+struct IntPair
 {
    i32 key;
    i32 value;
    IntPair *next;
-}IntPair;
+};
 
 typedef struct IntHashMap
 {
@@ -2186,8 +2192,7 @@ create_hashmap(u32 size)
     res.size = size;
     //res.data = (IntPair**)arena_alloc(&global_platform.permanent_storage, sizeof(IntPair*) * size);
     res.data = (IntPair**)ALLOC(sizeof(IntPair*) * size);
-    i32 i;
-    for (i = 0; i < size; ++i)
+    for (i32 i = 0; i < size; ++i)
         res.data[i] = NULL;
     return res;
 }
@@ -2202,8 +2207,8 @@ insert_hashmap(IntHashMap* table, i32 key, i32 val)
 {
    i32 pos = hash_code(table, key);
    IntPair *list_to_insert_pair = table->data[pos];
-   IntPair* new_pair = (IntPair*)ALLOC(sizeof(IntPair));
-   IntPair* temp = list_to_insert_pair;
+   IntPair *new_pair = (IntPair*)ALLOC(sizeof(IntPair));
+   IntPair *temp = list_to_insert_pair;
    while (temp)
    {
         if (temp->key == key)
@@ -2223,8 +2228,8 @@ static i32
 lookup_hashmap(IntHashMap* table, u32 key)
 {
     u32 pos = hash_code(table, key);
-    IntPair* list_to_search = table->data[pos];
-    IntPair* iter = list_to_search;
+    IntPair *list_to_search = table->data[pos];
+    IntPair *iter = list_to_search;
     while (iter)
     {
        if (iter->key == key)
@@ -2240,9 +2245,9 @@ static i32
 remove_hashmap(IntHashMap* table, u32 key)
 {
     u32 pos = hash_code(table, key);
-    IntPair* list_to_search = table->data[pos];
-    IntPair* iter = list_to_search;
-    IntPair* prev = NULL;
+    IntPair *list_to_search = table->data[pos];
+    IntPair *iter = list_to_search;
+    IntPair *prev = NULL;
     while (iter)
     {
        if (iter->key == key)
@@ -2271,16 +2276,17 @@ static void* free_next(IntPair *p)
     free(p);
 }
 
+//NOTE(ilias): This is so wrong!! Never use this!!
 static void free_hashmap(IntHashMap* table)
 {
     for (u32 i = 0; i < table->size; ++i)
     {
-        IntPair* next = table->data[i];
+        IntPair *next = table->data[i];
         free_next(next);
     }
 }
 
-//A stretchy buffer implementation
+//A stretchy buffer implementation [C99]
 
 //HOW TO USE: declare your array of prefered type as TYPE *arr = NULL;
 //then every time you need to insert something, buf_push(arr, ELEMENT);
@@ -2309,10 +2315,6 @@ typedef struct BufHdr
 #define buf_push(b, ...) (buf_fit((b), 1 + buf_len(b)), (b)[buf__hdr(b)->len++] = (__VA_ARGS__))
 #define buf_free(b) ((b) ? (free(buf__hdr(b)), (b) = NULL) : 0)
 
-
-
-
-
 static void *buf__grow(const void *buf, u32 new_len, u32 element_size)
 {
    u32 new_cap = max(16, max(1 + 2*buf_cap(buf), new_len));
@@ -2333,90 +2335,26 @@ static void *buf__grow(const void *buf, u32 new_len, u32 element_size)
 }
 /* example usage of stretchy buffer
 {
-        int *testarr = NULL;
-        buf_push(testarr, 1);
-        buf_push(testarr, 2);
-        buf_push(testarr, 3);
-        buf_push(testarr, 4);
-        buf_push(testarr, 5);
-        buf_push(testarr, 6);
-        buf_push(testarr, 7);
-        buf_push(testarr, 8);
-        buf_push(testarr, 9);
+        int *arr = NULL;
+        buf_push(arr, 1);
+        buf_push(arr, 2);
+        buf_push(arr, 3);
+        buf_push(arr, 4);
+        buf_push(arr, 5);
+        buf_push(arr, 6);
 
-        for (int i = 0; i < 8; ++i)
+        for (int i = 0; i < 6; ++i)
         {
-            int x = testarr[i];
+            int x = arr[i];
             assert(x == i+1);
         }
 
-        buf_free(testarr);
+        buf_free(arr);
 }
 */
 #ifdef __cplusplus
 }
 #endif
-
-//SHOULDNT be here just a dependency issue
-#include "vector"
-typedef struct Joint
-{
-    u32 index;
-    String name;
-    String sid;
-    std::vector<Joint> children;
-    Joint *parent;
-    //Joint* children;
-    //u32 num_of_children;
-    mat4 animated_transform; //joint transform
-    mat4 local_bind_transform;
-    mat4 inv_bind_transform;
-} Joint;
-
-
-typedef struct vertex
-{
-   vec3 position; 
-   vec3 normal;
-   vec2 tex_coord;
-}vertex;
-
-static vertex vert(vec3 p, vec3 n, vec2 t)
-{
-    vertex res;
-    res.position = p;
-    res.normal = n;
-    res.tex_coord = t;
-    return res;
-}
-
-typedef struct AnimatedVertex
-{
-    vec3 position;
-    vec3 normal;
-    vec2 tex_coord;
-    ivec3 joint_ids;
-    vec3 weights;
-}AnimatedVertex;
-
-typedef struct MeshData{
-    vec3* positions; 
-    vec3* normals; 
-    vec2* tex_coords; 
-    vertex* verts; //just for rendering
-    i32 vertex_count;
-    i32* joint_ids; 
-    vec3* weights; 
-    u32 size;
-
-    mat4* inv_bind_poses;
-    i32 inv_bind_poses_count;
-
-    Joint root;
-    AnimatedVertex* vertices;
-
-}MeshData;
-
 
 
 #endif

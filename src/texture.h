@@ -27,9 +27,8 @@ static b32 load_texture(Texture* tex,const char *filename)
     //glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR); //TODO FIX
     //glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
 
-    // load and generate the texture
     int width = 0, height = 0, nrChannels;
-    stbi_set_flip_vertically_on_load(true);
+    stbi_set_flip_vertically_on_load(TRUE);
     unsigned char *data = stbi_load(filename, &width, &height, &nrChannels,STBI_rgb_alpha);
     if (data)
     {
@@ -53,51 +52,42 @@ typedef struct Image
 static Image 
 load_image_bytes(const char *filename)
 {
+    Image res;
     i32 width = 0, height = 0, nrChannels;
-    stbi_set_flip_vertically_on_load(true);
+    stbi_set_flip_vertically_on_load(TRUE);
     unsigned char *data = stbi_load(filename, &width, &height, &nrChannels,STBI_rgb_alpha);
-    return {data, width, height};
+    res.data = data;
+    res.width = width;
+    res.height = height;
+    return res;
 }
 
-
-typedef struct TextureContainer
+static void
+write_texture2D_to_disk(Texture *tex)
 {
-    Texture t;
-    std::string filename;
-    b32 has_mipmaps;
-}TextureContainer;
+   GLfloat *pixels = (GLfloat*)ALLOC(sizeof(f32) * 3 * tex->width* tex->height);   
+   glBindTexture(GL_TEXTURE_2D,tex->id);
+   glGetTexImage(GL_TEXTURE_2D, 0, GL_RGB, GL_FLOAT, pixels);
+   ppm_save_pixels(tex->width, tex->height,pixels);
+}
 
-typedef struct TextureManager
-{
-    TextureContainer textures[32];
-    u32 size = 0;
-    u32 max_size = 32;
-}TextureManager;
+/* example of changing some texture with the use of OpenGL 4.2 Images
 
-static Texture* 
-find_texture(TextureManager* manager, const char* filename)
-{
-    for (u32 i = 0; i < manager->size; ++i)
+    shader_load(&image_shader,"../assets/shaders/image_demo.vert", "../assets/shaders/image_demo.frag");
     {
-        if (strcmp(manager->textures[i].filename.c_str(), filename) == 0)
-            return &manager->textures[i].t;
-    }
-    return 0; //texture not found
-}
+        glBindImageTexture(3, q.texture.id, 0, GL_FALSE, 0, GL_READ_WRITE, GL_RGBA8UI);
+        use_shader(&image_shader);
+        setFloat(&image_shader, "time", global_platform.current_time);
+        setInt(&image_shader, "width", q.texture.width);
+        setInt(&image_shader, "height", q.texture.height);
+        glDrawArrays(GL_POINTS, 0, q.texture.width*q.texture.height);//we launch one GPU thread per pixel
+        // make sure all computations are done, before we do the next pass, with a barrier.
+        glMemoryBarrier(GL_SHADER_IMAGE_ACCESS_BARRIER_BIT);
 
-static GLuint 
-push_texture(TextureManager* manager, const char* filepath)
-{
-    Texture dummy;
-    load_texture(&dummy,filepath);
-    std::string filename = getFileName(filepath);
-    TextureContainer to_insert = {dummy, getFileName(filepath), 1};
-    
-    //putting TextureContainer in textures array (if it fits)
-    if (manager->size >= manager->max_size || dummy.id == 0)
-        return 0;
-    manager->textures[manager->size++] = to_insert;
-    return dummy.id;
-}
+        write_texture2D_to_disk(&q.texture.id);
+    }
+
+*/
+
 
 #endif
