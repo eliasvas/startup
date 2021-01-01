@@ -14,7 +14,7 @@ typedef struct Texture
     u32 height;
 }Texture;
 
-static b32 load_texture(Texture* tex,const char *filename)
+internal b32 load_texture(Texture* tex,const char *filename)
 {
     b32 result = 0;
     glGenTextures(1, &tex->id);
@@ -41,53 +41,5 @@ static b32 load_texture(Texture* tex,const char *filename)
     tex->height = height;
     return result;
 }
-
-typedef struct Image 
-{
-    unsigned char *data;
-    i32 width;
-    i32 height;
-}Image;
-
-static Image 
-load_image_bytes(const char *filename)
-{
-    Image res;
-    i32 width = 0, height = 0, nrChannels;
-    stbi_set_flip_vertically_on_load(TRUE);
-    unsigned char *data = stbi_load(filename, &width, &height, &nrChannels,STBI_rgb_alpha);
-    res.data = data;
-    res.width = width;
-    res.height = height;
-    return res;
-}
-
-static void
-write_texture2D_to_disk(Texture *tex)
-{
-   GLfloat *pixels = (GLfloat*)ALLOC(sizeof(f32) * 3 * tex->width* tex->height);   
-   glBindTexture(GL_TEXTURE_2D,tex->id);
-   glGetTexImage(GL_TEXTURE_2D, 0, GL_RGB, GL_FLOAT, pixels);
-   ppm_save_pixels(tex->width, tex->height,pixels);
-}
-
-/* example of changing some texture with the use of OpenGL 4.2 Images
-
-    shader_load(&image_shader,"../assets/shaders/image_demo.vert", "../assets/shaders/image_demo.frag");
-    {
-        glBindImageTexture(3, q.texture.id, 0, GL_FALSE, 0, GL_READ_WRITE, GL_RGBA8UI);
-        use_shader(&image_shader);
-        setFloat(&image_shader, "time", global_platform.current_time);
-        setInt(&image_shader, "width", q.texture.width);
-        setInt(&image_shader, "height", q.texture.height);
-        glDrawArrays(GL_POINTS, 0, q.texture.width*q.texture.height);//we launch one GPU thread per pixel
-        // make sure all computations are done, before we do the next pass, with a barrier.
-        glMemoryBarrier(GL_SHADER_IMAGE_ACCESS_BARRIER_BIT);
-
-        write_texture2D_to_disk(&q.texture.id);
-    }
-
-*/
-
 
 #endif

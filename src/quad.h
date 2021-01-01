@@ -19,8 +19,8 @@ static f32 quad_vertices[] = {
      0.5f, -0.5f, 0.0f,   1.0f, 0.0f,   // bottom right
     -0.5f, -0.5f, 0.0f,   0.0f, 0.0f,   // bottom left
 };
-static void 
-init_quad(Quad* q, char *tex_name)
+internal void 
+quad_init(Quad* q, char *tex_name)
 {
     GLuint VBO;
     shader_load(&q->shader,"../assets/shaders/quad.vert", "../assets/shaders/quad.frag");
@@ -38,14 +38,14 @@ init_quad(Quad* q, char *tex_name)
     glBindVertexArray(0);
 }
 
-static void 
-render_quad(Quad* q)
+internal void 
+quad_render(Quad* q)
 {
     mat4 mvp = m4d(1.f);//if you want you can render with a MVP matrix
     use_shader(&q->shader);
     glActiveTexture(GL_TEXTURE0);
     glBindTexture(GL_TEXTURE_2D, q->texture.id);
-    setMat4fv(&q->shader, "MVP", (float*)mvp.elements);
+    shader_set_mat4fv(&q->shader, "MVP", (float*)mvp.elements);
     glBindVertexArray(q->VAO);
     glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
     glBindVertexArray(0);

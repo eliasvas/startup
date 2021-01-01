@@ -4,18 +4,18 @@
 Platform global_platform;
 //errors are written here, the program will crash and produce an error
 char infoLog[512]; 
-static HDC global_device_context;
-static HWND WND;
+global HDC global_device_context;
+global HWND WND;
 #include <windows.h>
 #include "game.c"
 #include "win32_opengl.c"
 #include "tools.h"
 //these are timers!
-static LARGE_INTEGER fr,st,ft;
+global LARGE_INTEGER fr,st,ft;
 
 
 
-static LRESULT Win32WindowProc(HWND hWnd, UINT message, WPARAM w_param, LPARAM l_param) {
+internal LRESULT Win32WindowProc(HWND hWnd, UINT message, WPARAM w_param, LPARAM l_param) {
 
     LRESULT result = {0};
     if (message == WM_SIZE)
@@ -107,20 +107,20 @@ static LRESULT Win32WindowProc(HWND hWnd, UINT message, WPARAM w_param, LPARAM l
     return result;
 }
 
-static void
+internal void
 Win32CleanUpOpenGL(HDC *device_context)
 {
     wglMakeCurrent(*device_context, 0);
     wglDeleteContext(win32_opengl_context);
 }
 
-static void
+internal void
 Win32OpenGLSetVerticalSync(b32 vsync)
 {
     wglSwapIntervalEXT(!!vsync);
 }
 
-static void
+internal void
 Win32OpenGLSwapBuffers(HDC device_context)
 {
     wglSwapLayerBuffers(device_context, WGL_SWAP_MAIN_PLANE);

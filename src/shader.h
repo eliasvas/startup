@@ -21,12 +21,12 @@ typedef struct Shader
 
 
 
-static void use_shader(Shader* shader)
+internal void use_shader(Shader* shader)
 {
     glUseProgram(shader->ID);
 }
 
-static GLuint load_shader_from_strings (const char * vertex_str, const char * fragment_str)
+internal GLuint shader_load_from_strings (const char * vertex_str, const char * fragment_str)
 { 
     GLuint ID;
     // 2. compile shaders
@@ -72,17 +72,17 @@ static GLuint load_shader_from_strings (const char * vertex_str, const char * fr
     glDeleteShader(fragment);
     return ID;
 }
-static void shader_load (Shader* s, const char * vertex_path, const char * fragment_path)
+internal void shader_load (Shader* s, const char * vertex_path, const char * fragment_path)
 {
     s->vertex_str = vertex_path;
     s->fragment_str = fragment_path;
     const char* vs = read_whole_file(vertex_path);
     const char* fs = read_whole_file(fragment_path); 
-    s->ID = load_shader_from_strings(vs,fs);
+    s->ID = shader_load_from_strings(vs,fs);
 
 }
 
-static void reload_shader_from_files( GLuint* program, const char* vertex_shader_filename, const char* fragment_shader_filename ) {
+internal void shader_reload_from_files( GLuint* program, const char* vertex_shader_filename, const char* fragment_shader_filename ) {
   assert( program && vertex_shader_filename && fragment_shader_filename );
   Shader new_shader;
   shader_load(&new_shader,vertex_shader_filename, fragment_shader_filename );
@@ -91,34 +91,34 @@ static void reload_shader_from_files( GLuint* program, const char* vertex_shader
     *program = new_shader.ID;
   }
 }
-static void 
-setBool(Shader* shader, const char *name, b8 value)
+internal void 
+shader_set_bool(Shader* shader, const char *name, b8 value)
 {         
     glUniform1i(glGetUniformLocation(shader->ID, name), (int)value); 
 }
-static void 
-setInt(Shader* shader, const char *name, i32 value)
+internal void 
+shader_set_int(Shader* shader, const char *name, i32 value)
 { 
     glUniform1i(glGetUniformLocation(shader->ID, name), value); 
 }
-static void 
-setFloat(Shader * shader, const char *name, f32 value)
+internal void 
+shader_set_float(Shader * shader, const char *name, f32 value)
 { 
     glUniform1f(glGetUniformLocation(shader->ID, name), value); 
 } 
-static void
-setVec3(Shader * shader, const char *name, vec3 value)
+internal void
+shader_set_vec3(Shader * shader, const char *name, vec3 value)
 { 
     glUniform3f(glGetUniformLocation(shader->ID, name), value.x,value.y,value.z); 
 } 
 
-static void
-setVec4(Shader * shader, const char *name, vec4 value)
+internal void
+shader_set_vec4(Shader * shader, const char *name, vec4 value)
 { 
     glUniform3f(glGetUniformLocation(shader->ID, name), value.x,value.y,value.z, value.w); 
 } 
-static void 
-setMat4fv(Shader * shader, const char *name, f32* value)
+internal void 
+shader_set_mat4fv(Shader * shader, const char *name, f32* value)
 { 
     glUniformMatrix4fv(glGetUniformLocation(shader->ID, name),1,GL_FALSE, value);  //NOTE(ilias): check
 }
